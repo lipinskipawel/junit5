@@ -17,8 +17,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import jdk.jfr.Category;
+import jdk.jfr.Event;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
+import jdk.jfr.StackTrace;
 
 import org.apiguardian.api.API;
 import org.junit.platform.engine.TestExecutionResult;
@@ -93,16 +96,21 @@ public class FlightRecordingExecutionListener implements TestExecutionListener {
 		}
 	}
 
+	@Category({ "JUnit", "Execution" })
+	@StackTrace(false)
+	abstract static class ExecutionEvent extends Event {
+	}
+
 	@Label("Test Execution")
 	@Name("org.junit.TestPlanExecution")
-	static class TestPlanExecutionEvent extends JUnitEvent {
+	static class TestPlanExecutionEvent extends ExecutionEvent {
 		@Label("Contains Tests")
 		boolean containsTests;
 		@Label("Engine Names")
 		String engineNames;
 	}
 
-	abstract static class TestEvent extends JUnitEvent {
+	abstract static class TestEvent extends ExecutionEvent {
 		@UniqueId
 		@Label("Unique Id")
 		String uniqueId;
@@ -141,7 +149,7 @@ public class FlightRecordingExecutionListener implements TestExecutionListener {
 
 	@Label("Report Entry")
 	@Name("org.junit.ReportEntry")
-	static class ReportEntryEvent extends JUnitEvent {
+	static class ReportEntryEvent extends ExecutionEvent {
 		@UniqueId
 		@Label("Unique Id")
 		String uniqueId;

@@ -46,8 +46,6 @@ public class FlightRecordingDiscoveryListenerIntegrationTests {
 		LauncherFactory.create(config).discover(request);
 		jfrEvents.awaitEvents();
 
-		jfrEvents.stream().forEach(System.out::println);
-
 		assertThat(jfrEvents) //
 				.contains(event("org.junit.LauncherDiscovery") //
 				// TODO JfrUnit does not yey support checking int values

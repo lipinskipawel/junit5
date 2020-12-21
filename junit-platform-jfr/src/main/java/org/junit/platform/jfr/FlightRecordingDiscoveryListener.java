@@ -16,8 +16,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
+import jdk.jfr.Category;
+import jdk.jfr.Event;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
+import jdk.jfr.StackTrace;
 
 import org.apiguardian.api.API;
 import org.junit.platform.engine.DiscoveryFilter;
@@ -57,6 +60,7 @@ public class FlightRecordingDiscoveryListener extends LauncherDiscoveryListener 
 	public void engineDiscoveryStarted(org.junit.platform.engine.UniqueId engineId) {
 		var event = new EngineDiscoveryEvent();
 		event.begin();
+		System.out.println("engineId = " + engineId);
 		event.uniqueId = engineId.toString();
 		engineDiscoveryEvents.put(engineId, event);
 	}
@@ -68,9 +72,15 @@ public class FlightRecordingDiscoveryListener extends LauncherDiscoveryListener 
 		event.commit();
 	}
 
+	@Category({ "JUnit", "Discovery" })
+	@StackTrace(false)
+	abstract static class DiscoveryEvent extends Event {
+	}
+
 	@Label("Test Discovery")
+	@Category({ "JUnit", "Discovery" })
 	@Name("org.junit.LauncherDiscovery")
-	static class LauncherDiscoveryEvent extends JUnitEvent {
+	static class LauncherDiscoveryEvent extends DiscoveryEvent {
 
 		@Label("Number of selectors")
 		int selectors;
@@ -80,8 +90,9 @@ public class FlightRecordingDiscoveryListener extends LauncherDiscoveryListener 
 	}
 
 	@Label("Engine Discovery")
+	@Category({ "JUnit", "Discovery" })
 	@Name("org.junit.EngineDiscovery")
-	static class EngineDiscoveryEvent extends JUnitEvent {
+	static class EngineDiscoveryEvent extends DiscoveryEvent {
 
 		@UniqueId
 		@Label("Unique Id")
