@@ -27,7 +27,7 @@ import org.junit.platform.launcher.core.LauncherConfig;
 import org.junit.platform.launcher.core.LauncherFactory;
 
 @JfrEventTest
-public class FlightRecordingListenerIntegrationTests {
+public class FlightRecordingExecutionListenerIntegrationTests {
 
 	public JfrEvents jfrEvents = new JfrEvents();
 
@@ -35,6 +35,7 @@ public class FlightRecordingListenerIntegrationTests {
 	@EnableEvent("org.junit.*")
 	void reportsEvents() {
 		var config = LauncherConfig.builder() //
+				.enableLauncherDiscoveryListenerAutoRegistration(false) //
 				.enableTestExecutionListenerAutoRegistration(false) //
 				.enableTestEngineAutoRegistration(false) //
 				.addTestEngines(new JupiterTestEngine()) //
@@ -43,18 +44,18 @@ public class FlightRecordingListenerIntegrationTests {
 				.selectors(selectClass(TestCase.class)) //
 				.build();
 
-		LauncherFactory.create(config).execute(request, new FlightRecordingListener());
+		LauncherFactory.create(config).execute(request, new FlightRecordingExecutionListener());
 		jfrEvents.awaitEvents();
 
 		assertThat(jfrEvents) //
-				.contains(event("org.junit.TestPlan") //
+				.contains(event("org.junit.TestPlanExecution") //
 						.with("engineNames", "JUnit Jupiter")) //
 				.contains(event("org.junit.TestExecution") //
 						.with("displayName", "JUnit Jupiter") //
 						.with("type", "CONTAINER")) //
 				.contains(event("org.junit.TestExecution") //
-						.with("displayName", FlightRecordingListenerIntegrationTests.class.getSimpleName() + "$"
-								+ TestCase.class.getSimpleName()) //
+						.with("displayName", FlightRecordingExecutionListenerIntegrationTests.class.getSimpleName()
+								+ "$" + TestCase.class.getSimpleName()) //
 						.with("type", "CONTAINER")) //
 				.contains(event("org.junit.TestExecution") //
 						.with("displayName", "test(TestReporter)") //

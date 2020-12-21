@@ -47,6 +47,26 @@ public abstract class LauncherDiscoveryListener implements EngineDiscoveryListen
 	};
 
 	/**
+	 * Called when test discovery is about to be started.
+	 *
+	 * @param request the request for which discovery is being started
+	 * @since 1.8
+	 */
+	@API(status = EXPERIMENTAL, since = "1.8")
+	public void launcherDiscoveryStarted(LauncherDiscoveryRequest request) {
+	}
+
+	/**
+	 * Called when test discovery has finished.
+	 *
+	 * @param request the request for which discovery has finished
+	 * @since 1.8
+	 */
+	@API(status = EXPERIMENTAL, since = "1.8")
+	public void launcherDiscoveryFinished(LauncherDiscoveryRequest request) {
+	}
+
+	/**
 	 * Called when test discovery is about to be started for an engine.
 	 *
 	 * @param engineId the unique ID of the engine descriptor
