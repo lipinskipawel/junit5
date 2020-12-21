@@ -21,9 +21,9 @@ import org.junit.platform.engine.UniqueId;
  * {@link org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder}
  * to be notified of events that occur during test discovery.
  *
- * <p>All methods in this interface have empty <em>default</em> implementations.
- * Concrete implementations may therefore override one or more of these methods
- * to be notified of the selected events.
+ * <p>All methods in this class have empty <em>default</em> implementations.
+ * Subclasses may therefore override one or more of these methods to be notified
+ * of the selected events.
  *
  * <p>JUnit provides default implementations that are created via the factory
  * methods in
@@ -45,6 +45,9 @@ public abstract class LauncherDiscoveryListener implements EngineDiscoveryListen
 	 */
 	public static final LauncherDiscoveryListener NOOP = new LauncherDiscoveryListener() {
 	};
+
+	public LauncherDiscoveryListener() {
+	}
 
 	/**
 	 * Called when test discovery is about to be started.
