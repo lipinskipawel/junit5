@@ -12,9 +12,10 @@ package org.junit.platform.jfr;
 
 import static org.apiguardian.api.API.Status.EXPERIMENTAL;
 
+import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import jdk.jfr.Category;
 import jdk.jfr.Event;
@@ -39,8 +40,7 @@ import org.junit.platform.launcher.LauncherDiscoveryRequest;
 @API(status = EXPERIMENTAL, since = "1.8")
 public class FlightRecordingDiscoveryListener extends LauncherDiscoveryListener {
 
-	private final AtomicReference<LauncherDiscoveryEvent> launcherDiscoveryEvent = new AtomicReference<>();
-	private final Map<org.junit.platform.engine.UniqueId, EngineDiscoveryEvent> engineDiscoveryEvents = new ConcurrentHashMap<>();
+	private final Deque<TestDiscovery> eventStack = new ConcurrentLinkedDeque<>();
 
 	@Override
 	public void launcherDiscoveryStarted(LauncherDiscoveryRequest request) {
@@ -48,28 +48,31 @@ public class FlightRecordingDiscoveryListener extends LauncherDiscoveryListener 
 		event.begin();
 		event.selectors = request.getSelectorsByType(DiscoverySelector.class).size();
 		event.filters = request.getFiltersByType(DiscoveryFilter.class).size();
-		launcherDiscoveryEvent.set(event);
+		eventStack.push(new TestDiscovery(event));
 	}
 
 	@Override
 	public void launcherDiscoveryFinished(LauncherDiscoveryRequest request) {
-		launcherDiscoveryEvent.getAndSet(null).commit();
+		eventStack.pop().launcherDiscoveryEvent.commit();
 	}
 
 	@Override
 	public void engineDiscoveryStarted(org.junit.platform.engine.UniqueId engineId) {
 		var event = new EngineDiscoveryEvent();
 		event.begin();
-		System.out.println("engineId = " + engineId);
 		event.uniqueId = engineId.toString();
-		engineDiscoveryEvents.put(engineId, event);
+		getEngineDiscoveryEvents().put(engineId, event);
 	}
 
 	@Override
 	public void engineDiscoveryFinished(org.junit.platform.engine.UniqueId engineId, EngineDiscoveryResult result) {
-		var event = engineDiscoveryEvents.remove(engineId);
+		var event = getEngineDiscoveryEvents().remove(engineId);
 		event.result = result.getStatus().toString();
 		event.commit();
+	}
+
+	private Map<org.junit.platform.engine.UniqueId, EngineDiscoveryEvent> getEngineDiscoveryEvents() {
+		return eventStack.element().engineDiscoveryEvents;
 	}
 
 	@Category({ "JUnit", "Discovery" })
@@ -100,5 +103,15 @@ public class FlightRecordingDiscoveryListener extends LauncherDiscoveryListener 
 
 		@Label("Result")
 		String result;
+	}
+
+	private static class TestDiscovery {
+
+		private final Map<org.junit.platform.engine.UniqueId, EngineDiscoveryEvent> engineDiscoveryEvents = new ConcurrentHashMap<>();
+		private final LauncherDiscoveryEvent launcherDiscoveryEvent;
+
+		TestDiscovery(LauncherDiscoveryEvent launcherDiscoveryEvent) {
+			this.launcherDiscoveryEvent = launcherDiscoveryEvent;
+		}
 	}
 }

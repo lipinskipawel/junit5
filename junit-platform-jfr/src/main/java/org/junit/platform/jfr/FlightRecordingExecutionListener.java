@@ -12,9 +12,10 @@ package org.junit.platform.jfr;
 
 import static org.apiguardian.api.API.Status.EXPERIMENTAL;
 
+import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.stream.Collectors;
 
 import jdk.jfr.Category;
@@ -40,8 +41,7 @@ import org.junit.platform.launcher.TestPlan;
 @API(status = EXPERIMENTAL, since = "1.8")
 public class FlightRecordingExecutionListener implements TestExecutionListener {
 
-	private final AtomicReference<TestPlanExecutionEvent> testPlanExecutionEvent = new AtomicReference<>();
-	private final Map<String, TestExecutionEvent> testExecutionEvents = new ConcurrentHashMap<>();
+	private final Deque<TestPlanExecution> eventStack = new ConcurrentLinkedDeque<>();
 
 	@Override
 	public void testPlanExecutionStarted(TestPlan plan) {
@@ -49,13 +49,13 @@ public class FlightRecordingExecutionListener implements TestExecutionListener {
 		event.containsTests = plan.containsTests();
 		event.engineNames = plan.getRoots().stream().map(TestIdentifier::getDisplayName).collect(
 			Collectors.joining(", "));
-		testPlanExecutionEvent.set(event);
 		event.begin();
+		eventStack.push(new TestPlanExecution(event));
 	}
 
 	@Override
 	public void testPlanExecutionFinished(TestPlan plan) {
-		testPlanExecutionEvent.getAndSet(null).commit();
+		eventStack.pop().testPlanExecutionEvent.commit();
 	}
 
 	@Override
@@ -69,20 +69,24 @@ public class FlightRecordingExecutionListener implements TestExecutionListener {
 	@Override
 	public void executionStarted(TestIdentifier test) {
 		var event = new TestExecutionEvent();
-		testExecutionEvents.put(test.getUniqueId(), event);
 		event.initialize(test);
 		event.begin();
+		getTestExecutionEvents().put(test.getUniqueId(), event);
 	}
 
 	@Override
 	public void executionFinished(TestIdentifier test, TestExecutionResult result) {
 		var throwable = result.getThrowable();
-		var event = testExecutionEvents.remove(test.getUniqueId());
+		var event = getTestExecutionEvents().remove(test.getUniqueId());
 		event.end();
 		event.result = result.getStatus().toString();
 		event.exceptionClass = throwable.map(Throwable::getClass).orElse(null);
 		event.exceptionMessage = throwable.map(Throwable::getMessage).orElse(null);
 		event.commit();
+	}
+
+	private Map<String, TestExecutionEvent> getTestExecutionEvents() {
+		return eventStack.element().testExecutionEvents;
 	}
 
 	@Override
@@ -157,5 +161,15 @@ public class FlightRecordingExecutionListener implements TestExecutionListener {
 		String key;
 		@Label("Value")
 		String value;
+	}
+
+	private static class TestPlanExecution {
+
+		private final Map<String, TestExecutionEvent> testExecutionEvents = new ConcurrentHashMap<>();
+		private final TestPlanExecutionEvent testPlanExecutionEvent;
+
+		TestPlanExecution(TestPlanExecutionEvent testPlanExecutionEvent) {
+			this.testPlanExecutionEvent = testPlanExecutionEvent;
+		}
 	}
 }
